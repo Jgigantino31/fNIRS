@@ -1,5 +1,9 @@
 # fNIRS
 
+## Information
+
+The folder Board Files contains all of the information needed to manufacture the device including schematic diagrams, component lists, and the laid out PCB as well as renders of the finished device. The folder Workspace contains the Code Composer Studio projects and other files that make up the device's software. The folder Application contains an example Android Application which can communicate with the device and was used to test the device.
+
 ## Project Setup
 
 Install the latest version of Code Composer Studio and Sensor Controller Studio. All software links are at the end of this document. Code Composer Studio should be installed to "C:\ti\ccs1210" while Sensor Controller Studio may installed to any directory. The deafult is "C:\Program Files (x86)\Texas Instruments\Sensor Controller Studio". You may optionally install SmartRF Flash Programmer V2 if you wish to directly install binary (.hex) files. It can be installed to any directory with the default being "C:\Program Files (x86)\Texas Instruments\SmartRF Tools\Flash Programmer 2". <br>
