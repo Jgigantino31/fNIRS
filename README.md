@@ -1,10 +1,22 @@
-# fNIRS
+# A Compact, Efficient fNIRS Design
 
-## Information
+This repository contains the information needed to fully recreate the work performed as part of my Master's Thesis at Villanova University. The thesis was submitted to the faculty of the Department of Electrical and Computer Engineering at Villanova University in partial fulfillment of the requirements for the degree of Master of Science in Electrical Engineering in April of 2023. The thesis titled "A Compact, Efficient fNIRS Design" is available in the root of the repository.
+
+## Repository Contents
 
 The folder "Board Files" contains all of the information needed to manufacture the device including schematic diagrams, component lists, and the laid out PCB as well as renders of the finished device. The folder "Workspace" contains the Code Composer Studio projects and other files that make up the device's software. The folder "Firmware Files" contain compiled binary files you can flash immediately without neededing to install Code Composer Studio and its supporting software. The folder "Application" contains an example Android Application which can communicate with the device and was used to test the device.
 
+## Device Hardware
+
+The device schematic was designed in Altium Circuit Maker and the project can be viewed online in Altium 365. You can also view the PCB layout, bill of materials, and a 3D render online. The folder "Board Files" contains the released project files which can be used to manufacture the device.
+
+**Altium 365 Project** - https://365.altium.com/files/D22399D6-5709-4094-A18F-3D94270D79AF <br>
+
 ## Device Software
+
+In order to flash the firmware to the device you must have a SimpleLink™ CC2650 wireless MCU LaunchPad™ Development Kit which are availble for purchase from Texas Instruments.
+
+**Launchpad Development Kit** - https://www.ti.com/tool/LAUNCHXL-CC2650 <br>
 
 ### Flash Pre-Compiled Binaries
 
