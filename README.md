@@ -4,7 +4,7 @@
 
 The folder "Board Files" contains all of the information needed to manufacture the device including schematic diagrams, component lists, and the laid out PCB as well as renders of the finished device. The folder "Workspace" contains the Code Composer Studio projects and other files that make up the device's software. The folder "Firmware Files" contain compiled binary files you can flash immediately without neededing to install Code Composer Studio and its supporting software. The folder "Application" contains an example Android Application which can communicate with the device and was used to test the device.
 
-## Project Setup
+## Device Software
 
 ### Flash Pre-Compiled Binaries
 
