@@ -6,13 +6,14 @@ This repository contains the information needed to fully recreate the work perfo
 
 The folder "Board Files" contains all of the information needed to manufacture the device including schematic diagrams, component lists, and the laid out PCB as well as renders of the finished device. The folder "Workspace" contains the Code Composer Studio projects and other files that make up the device's software. The folder "Firmware Files" contain compiled binary files you can flash immediately without neededing to install Code Composer Studio and its supporting software. The folder "Application" contains an example Android Application which can communicate with the device and was used to test the device.
 
-## Device Hardware
+## Hardware
 
 The device schematic was designed in Altium Circuit Maker and the project can be viewed online in Altium 365. You can also view the PCB layout, bill of materials, and a 3D render online. The folder "Board Files" contains the released project files which can be used to manufacture the device.
 
+**Circuit Maker Project** - https://workspace.circuitmaker.com/Projects/Details/JosephGigantino/fNIRS-V3 <br>
 **Altium 365 Project** - https://365.altium.com/files/D22399D6-5709-4094-A18F-3D94270D79AF <br>
 
-## Device Software
+## Software
 
 In order to flash the firmware to the device you must have a SimpleLink™ CC2650 wireless MCU LaunchPad™ Development Kit which are availble for purchase from Texas Instruments.
 
@@ -41,3 +42,20 @@ The folder "Workspace" should be set as the current workspace in Code Composer S
 **Code Composer Studio** - https://www.ti.com/tool/CCSTUDIO <br>
 **TI-RTOS V2.20.01.08 for CC13xx/CC26xx** - https://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/tirtos/index.html <br>
 **BLE-STACK V2.2.1** - https://www.ti.com/tool/BLE-STACK-ARCHIVE <br>
+
+## License
+
+Copyright (C) 2023 Joseph Gigantino
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
