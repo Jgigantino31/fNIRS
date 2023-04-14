@@ -1,0 +1,1261 @@
+               .deffile adi_defs__0.asm
+               .deffile ddi_defs__0.asm
+               .deffile reg_defs__0.asm
+               .deffile sce_defs__0.asm
+
+               ; Number of supported tasks
+               .define TASK_COUNT      1
+
+               ; Resource-specified definitions, if any
+               ; (None)
+
+
+               .segment begin "Framework"
+
+
+               VectorTable:
+0000 ---- 1408                         jsr         PowerUp
+0001 ---- 040c                         jmp         TaskCtrlReqVector
+0002 ---- 1408                         jsr         PowerUp
+0003 ---- 042c                         jmp         AonRtcCh2Vector
+0004 ---- 1408                         jsr         PowerUp
+0005 ---- 0447                         jmp         Event0Vector
+0006 ---- 1408                         jsr         PowerUp
+0007 ---- 044d                         jmp         TaskAlertAckVector
+
+
+
+
+               PowerUp:
+                                       ; Deassert the power-down request
+0008 ---- 4436                         iobclr      #0, [#IOP_WUC_PWRDWNREQ]
+
+                                       ; Wait for it to take effect
+0009 ---- 2437 /waitForPdAck:          iobtst      #0, [#IOP_WUC_PWRDWNACK]
+000a ---- aefe                         biob1       /waitForPdAck
+
+               FwEmptyFunc:            ; Done
+000b ---- adb7                         rts
+
+
+
+
+               TaskCtrlReqVector:
+                                       ; Clear the vector flag
+000c ---- 6442                         iobset      #0, [#IOP_EVCTL_VECFLAGSCLR]
+
+                                       ; For each task ...
+000d ---- 7000                         ld          R7, #0
+               /loop:
+                                           ; Save the task ID
+000e ---- 7c6b                             st          R7, [#fwCtrlInt/taskId]
+
+                                           ; Handle initialize request, if any
+000f ---- 6872                             ld          R6, [#fwCtrlExt/bvTaskInitializeReq]
+0010 ---- 0068                             ld          R0, #pFwTaskInitializeFuncTable
+0011 ---- 1425                             jsr         /handleReq
+
+                                           ; Handle execute request, if any
+0012 ---- 6873                             ld          R6, [#fwCtrlExt/bvTaskExecuteReq]
+0013 ---- 0069                             ld          R0, #pFwTaskExecuteFuncTable
+0014 ---- 1425                             jsr         /handleReq
+
+                                           ; Handle terminate request, if any
+0015 ---- 6874                             ld          R6, [#fwCtrlExt/bvTaskTerminateReq]
+0016 ---- 006a                             ld          R0, #pFwTaskTerminateFuncTable
+0017 ---- 1425                             jsr         /handleReq
+
+                                           ; Move on to the next task
+0018 ---- 786b                             ld          R7, [#fwCtrlInt/taskId]
+0019 ---- f801                             add         R7, #1
+
+001a ---- fa01                         cmp         R7, #TASK_COUNT
+001b ---- bef2                         bneq        /loop
+
+                                       ; Update which tasks are ...
+001c ---- 7870                         ld          R7, [#fwCtrlExt/bvActiveTasks]
+                                       ; ... currently active ...
+001d ---- 6872                         ld          R6, [#fwCtrlExt/bvTaskInitializeReq]
+001e ---- fd0e                         or          R7, R6
+                                       ; ... and inactive ...
+001f ---- 6874                         ld          R6, [#fwCtrlExt/bvTaskTerminateReq]
+0020 ---- ed92                         inv         R6
+0021 ---- fd06                         and         R7, R6
+0022 ---- 7c70                         st          R7, [#fwCtrlExt/bvActiveTasks]
+
+                                       ; We're READY for another request
+0023 ---- 642d                         iobset      #IOB_EVCTL_SWEV_READY, [#IOP_EVCTL_SWEVSET]
+
+                                       ; Generate an ALERT interrupt if needed before powering back down
+0024 ---- 0450                         jmp         GenAlertInterrupt;
+
+               /handleReq:
+                                       ; Restore the task ID, and load the function pointer (here to avoid pipeline hazard)
+0025 ---- 786b                         ld          R7, [#fwCtrlInt/taskId]
+0026 ---- 8f1f                         ld          R0, [R7+R0]
+
+                                       ; Skip this request?
+0027 ---- ed8f                         lsr         R6, R7
+0028 ---- ec01                         tst         R6, #0x0001
+0029 ---- be01                         bnz         /noSkip
+002a ---- adb7                             rts
+               /noSkip:
+                                       ; Make the call by jump, with return (rts) in the "called" function
+002b ---- 8db7                         jmp         R0
+
+
+
+
+               AonRtcCh2Vector:
+                                       ; Start clearing the RTC event
+002c ---- 6630                         iobset      #IOB_WUC_WUEV_RTC, [#IOP_WUC_WUEVCLR]
+
+                                       ; Clear the vector flag
+002d ---- 6542                         iobset      #1, [#IOP_EVCTL_VECFLAGSCLR]
+
+                                       ; For each task (R0 is the current task ID) ...
+002e ---- 0000                         ld          R0, #0
+               /loop:
+                                           ; ... that is active ...
+002f ---- 1870                             ld          R1, [#fwCtrlExt/bvActiveTasks]
+0030 ---- 9d88                             lsr         R1, R0
+0031 ---- 9c01                             tst         R1, #0x0001
+0032 ---- b60d                             bz          /skip
+
+                                               ; Fetch number of RTC intervals until next execution
+0033 ---- 1067                                 ld          R1, #pFwTaskExecuteScheduleTable
+0034 ---- af19                                 ld          R2, [R1+R0]
+
+                                               ; If not already 0, decrement and store. If then 0 ...
+0035 ---- aa00                                 cmp         R2, #0
+0036 ---- b609                                 beq         /skip
+0037 ---- a8ff                                 add         R2, #-1
+0038 ---- af39                                 st          R2, [R1+R0]
+0039 ---- be06                                 bnz         /skip
+
+                                                   ; ... execute the task
+003a ---- 0c6b                                     st          R0, [#fwCtrlInt/taskId]
+003b ---- 8869                                     add         R0, #pFwTaskExecuteFuncTable
+003c ---- 8f08                                     ld          R0, [R0]
+                                                   ; Insert NOP to avoid pipeline hazard
+003d ---- fd47                                     nop
+003e ---- 9db7                                     jsr         R0
+003f ---- 086b                                     ld          R0, [#fwCtrlInt/taskId]
+               /skip:
+                                           ; Move on to the next task
+0040 ---- 8801                             add         R0, #1
+
+0041 ---- 8a01                         cmp         R0, #TASK_COUNT
+0042 ---- beec                         bneq        /loop
+
+                                       ; Wait for the ACK event to be cleared
+0043 ---- 262f /waitOnRtcClearing:     iobtst      #IOB_WUC_WUEV_RTC, [#IOP_WUC_WUEVFLAGS]
+0044 ---- aefe                         biob1       /waitOnRtcClearing
+0045 ---- 4630                         iobclr      #IOB_WUC_WUEV_RTC, [#IOP_WUC_WUEVCLR]
+
+                                       ; Generate an ALERT interrupt if needed
+0046 ---- 0450                         jmp         GenAlertInterrupt;
+
+
+
+
+               Event0Vector:
+                                       ; Disable and clear the vector flag
+0047 ---- 5527                         iobclr      #IOB_EVCTL_VECCFG1_VEC2_EN, [#IOP_EVCTL_VECCFG1]
+0048 ---- 6642                         iobset      #2, [#IOP_EVCTL_VECFLAGSCLR]
+
+                                       ; Set the task ID
+0049 ---- 0000                         ld          R0, #0
+004a ---- 0c6b                         st          R0, [#fwCtrlInt/taskId]
+
+                                       ; Jump to the event task code
+004b ---- 140b                         jsr         FwEmptyFunc
+
+                                       ; Generate an ALERT interrupt if needed
+004c ---- 0450                         jmp         GenAlertInterrupt;
+
+
+
+
+               TaskAlertAckVector:
+                                       ; Clear the vector flag
+004d ---- 6742                         iobset      #3, [#IOP_EVCTL_VECFLAGSCLR]
+
+                                       ; Re-enable generation of ALERT interrupts
+004e ---- 03ff                         ld          R0, #-1
+004f ---- 0c6d                         st          R0, [#fwCtrlInt/alertGenMask]
+
+                                       ; Fall through to GenAlertInterrupt to generate another ALERT interrupt if needed
+
+
+
+
+               GenAlertInterrupt:
+                                       ; Do we have any ALERT-generating flags pending?
+0050 ---- 786c                         ld          R7, [#fwCtrlInt/bvTaskIoAlert]
+
+                                       ; Skip if the last I/O ALERT interrupt has not been acknowledged
+0051 ---- 686d                         ld          R6, [#fwCtrlInt/alertGenMask]
+0052 ---- ed37                         tst         R6, R7
+0053 ---- b605                         bz          /skipAlertGen
+
+                                           ; Transfer I/O flags from internal to external
+0054 ---- 0000                             ld          R0, #0
+0055 ---- 0c6c                             st          R0, [#fwCtrlInt/bvTaskIoAlert]
+0056 ---- 7c71                             st          R7, [#fwCtrlExt/bvTaskIoAlert]
+
+                                           ; Generate the ALERT interrupt, and clear the generation mask
+0057 ---- 652d                             iobset      #IOB_EVCTL_SWEV_ALERT, [#IOP_EVCTL_SWEVSET]
+0058 ---- 0c6d                             st          R0, [#fwCtrlInt/alertGenMask]
+               /skipAlertGen:
+                                       ; Fall through to PowerDown ...
+
+
+
+
+               PowerDown:
+                                       ; If there are no unacknowledged ALERTs and no vectors pending ...
+0059 ---- 786d                         ld          R7, [#fwCtrlInt/alertGenMask]
+005a ---- 686e                         ld          R6, [#fwCtrlInt/alertCanPdAuxMask]
+005b ---- fd0e                         or          R7, R6
+005c ---- f801                         add         R7, #1 ; 0xFFFF -> 0x0000
+005d ---- e92b                         in          R6, [#IOP_EVCTL_VECFLAGS]
+005e ---- fd0e                         or          R7, R6
+005f ---- be01                         bnz         /noPowerDown
+
+                                           ; Assert the power-down request. We'll make sure that it has taken effect
+                                           ; or been completely ignored when waking up again
+0060 ---- 6436                             iobset      #0, [#IOP_WUC_PWRDWNREQ]
+               /noPowerDown:
+                                       ; Sleep until the next event
+0061 ---- bdb7 sleepInstr:             sleep
+
+
+
+
+0062 ---- 241a AdiDdiAcquire:          iobtst      #0, [#IOP_SMPH_SMPH0]
+0063 ---- a6fe                         biob0       AdiDdiAcquire
+0064 ---- adb7                         rts
+
+0065 ---- 641a AdiDdiRelease:          iobset      #0, [#IOP_SMPH_SMPH0]
+0066 ---- adb7                         rts
+
+
+
+
+               ; RTC ticks until next execution, one word for each task
+               pFwTaskExecuteScheduleTable:
+0067 ---- 0000                         dw          #0
+
+               ; Task code function pointers for each task code block, one word for each task
+               pFwTaskInitializeFuncTable:
+0068 ---- 0085                         dw          #dusk2dawn/initialize
+               pFwTaskExecuteFuncTable:
+0069 ---- 00a0                         dw          #dusk2dawn/execute
+               pFwTaskTerminateFuncTable:
+006a ---- 023d                         dw          #dusk2dawn/terminate
+
+               ; Run-time logging log requests and masks, one bit for each struct, one word for each task
+               pRtlTaskLogReqTable:
+               ; (Run-time logging is not used in this project)
+               pRtlTaskLogMaskTable:
+               ; (Run-time logging is not used in this project)
+
+
+               ; Internal control data
+               fwCtrlInt:
+006b ---- 0000 /taskId:                dw          #0      ; ID of the currently running task
+006c ---- 0000 /bvTaskIoAlert:         dw          #0x0000 ; LSB = Normal data exchange, MSB = Overflow or underflow
+006d ---- ffff /alertGenMask:          dw          #0xFFFF ; Can generate an ALERT interrupt now? (0xFFFF = yes, 0x0000 = no)
+006e ---- 0000 /alertCanPdAuxMask:     dw          #0x0000 ; Can power down AUX domain after ALERT interrupt generation? (0xFFFF = yes, 0x0000 = no)
+006f ---- 0000 /rtlStructLockReq:      dw          #0x0000 ; Run-time logging struct lock request (0=idle -> 1=requested -> 2=ready -> access -> 0=idle)
+
+               ; External control data, shared with the driver
+               fwCtrlExt:
+0070 ---- 0000 /bvActiveTasks:         dw          #0x0000 ; Indicates which tasks are currently active
+0071 ---- 0000 /bvTaskIoAlert:         dw          #0x0000 ; LSB = Normal data exchange, MSB = Overflow or underflow
+0072 ---- 0000 /bvTaskInitializeReq:   dw          #0x0000 ; Requests tasks to start
+0073 ---- 0000 /bvTaskExecuteReq:      dw          #0x0000 ; Requests tasks to execute once immediately
+0074 ---- 0000 /bvTaskTerminateReq:    dw          #0x0000 ; Requests tasks to stop
+
+
+               .segment end "Framework"
+
+
+               fwTaskDataStructures:
+               .segment begin "Task: Dusk2Dawn"
+               dusk2dawn/cfg:
+               dusk2dawn/cfg/lowBatteryEnd:
+0075 ---- 06b2                         dw          #1714
+               dusk2dawn/cfg/lowBatteryStart:
+0076 ---- 0683                         dw          #1667
+               dusk2dawn/input:
+               dusk2dawn/input/enableLowPowerMode:
+0077 ---- 0000                         dw          #0
+               dusk2dawn/input/setDutyCycle:
+0078 ---- 0005                         dw          #5
+               dusk2dawn/output:
+               dusk2dawn/output/adcValue1:
+0079 ---- 0000                         dw          #0
+               dusk2dawn/output/adcValue2:
+007a ---- 0000                         dw          #0
+               dusk2dawn/output/adcValue3:
+007b ---- 0000                         dw          #0
+               dusk2dawn/output/adcValue4:
+007c ---- 0000                         dw          #0
+               dusk2dawn/output/batteryValue:
+007d ---- 0898                         dw          #2200
+               dusk2dawn/output/chargeValue:
+007e ---- 0001                         dw          #1
+               dusk2dawn/output/dutyCycleStatus:
+007f ---- 0005                         dw          #5
+               dusk2dawn/output/lowBatteryStatus:
+0080 ---- 0000                         dw          #0
+               dusk2dawn/output/powerModeStatus:
+0081 ---- 0000                         dw          #0
+               dusk2dawn/output/powerValue:
+0082 ---- 0000                         dw          #0
+               dusk2dawn/output/usbValue:
+0083 ---- 0000                         dw          #0
+               dusk2dawn/state:
+               dusk2dawn/state/loop:
+0084 ---- 0000                         dw          #0
+               .segment end "Task: Dusk2Dawn"
+
+
+               .segment begin "Task: Dusk2Dawn"
+               dusk2dawn/initialize:
+               ;? // Turn off 8.2 V power supply
+               ;? gpioClearOutput(AUXIO_O_EN_RUN);
+0085 ---- 540f                         iobclr      #(12 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (12 >> 3))]
+               ;?
+               ;? // Turn on Red, Yellow, and Green LED
+               ;? gpioSetOutput(AUXIO_O_LED_R);
+0086 ---- 640f                         iobset      #(8 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (8 >> 3))]
+               ;? gpioSetOutput(AUXIO_O_LED_Y);
+0087 ---- 650f                         iobset      #(9 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (9 >> 3))]
+               ;? gpioSetOutput(AUXIO_O_LED_G);
+0088 ---- 660f                         iobset      #(10 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (10 >> 3))]
+               ;?
+               ;? // Wait 100 ms to display LEDs to user
+               ;? fwDelayUs(100000, FW_DELAY_RANGE_100_MS);
+0089 ---- 7093                         ld          R7, #(((100000 * 24 ) + ((1 << 14) - 1)) >> 14)
+008a ---- 600e                         ld          R6, #14
+008b ---- 163e                         jsr         FwDelay
+               ;?
+               ;? // Turn on 8.2 V power supply
+               ;? gpioSetOutput(AUXIO_O_EN_RUN);
+008c ---- 740f                         iobset      #(12 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (12 >> 3))]
+               ;?
+               ;? // Wait here forever until 8.2 V power supply is ready while waiting 10 ms between checks
+               ;? gpioGetInputValue(AUXIO_I_PG_MON; output.powerValue);
+008d ---- 500b                         ld          R5, #11
+008e ---- 1644                         jsr         gpioGetInputValue
+008f ---- 7c82                         st          R7, [#dusk2dawn/output/powerValue]
+               ;? while (output.powerValue == 0) {
+               /id0131:
+0090 ---- 0882                         ld          R0, [#dusk2dawn/output/powerValue]
+0091 ---- 8a00                         cmp         R0, #0
+0092 ---- be07                         bneq        /id0132
+               ;?     fwDelayUs(10000, FW_DELAY_RANGE_10_MS);
+0093 ---- 70eb                             ld          R7, #(((10000 * 24 ) + ((1 << 10) - 1)) >> 10)
+0094 ---- 600a                             ld          R6, #10
+0095 ---- 163e                             jsr         FwDelay
+               ;?     gpioGetInputValue(AUXIO_I_PG_MON; output.powerValue);
+0096 ---- 500b                             ld          R5, #11
+0097 ---- 1644                             jsr         gpioGetInputValue
+0098 ---- 7c82                             st          R7, [#dusk2dawn/output/powerValue]
+               ;? }
+0099 ---- 0490                         jmp         /id0131
+               /id0132:
+               ;?
+               ;? // Turn off Red, Yellow, and Green LED
+               ;? gpioClearOutput(AUXIO_O_LED_R);
+009a ---- 440f                         iobclr      #(8 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (8 >> 3))]
+               ;? gpioClearOutput(AUXIO_O_LED_Y);
+009b ---- 450f                         iobclr      #(9 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (9 >> 3))]
+               ;? gpioClearOutput(AUXIO_O_LED_G);
+009c ---- 460f                         iobclr      #(10 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (10 >> 3))]
+               ;?
+               ;? // Schedule the first execution at the next RTC tick
+               ;? fwScheduleTask(1);
+009d ---- 0001                         ld          R0, #1
+009e ---- 0c67                         st          R0, [#(pFwTaskExecuteScheduleTable + 0)]
+               dusk2dawn/initializeDone:
+009f ---- adb7                         rts
+
+
+
+
+               dusk2dawn/execute:
+               ;? // ------------------------
+               ;? // Handle inputs to program
+               ;? // ------------------------
+               ;?
+               ;? // Check if desired power mode is not the current power mode
+               ;? if (input.enableLowPowerMode != output.powerModeStatus) {
+00a0 ---- 0877                         ld          R0, [#dusk2dawn/input/enableLowPowerMode]
+00a1 ---- 1881                         ld          R1, [#dusk2dawn/output/powerModeStatus]
+00a2 ---- 8d29                         cmp         R0, R1
+00a3 ---- b60d                         beq         /id0141
+               ;?
+               ;?     if (input.enableLowPowerMode == 0) {
+00a4 ---- 0877                             ld          R0, [#dusk2dawn/input/enableLowPowerMode]
+00a5 ---- 8a00                             cmp         R0, #0
+00a6 ---- be04                             bneq        /id0144
+               ;?
+               ;?         // Set power mode to normal and enable 8.2 V power supply
+               ;?         output.powerModeStatus = 0;
+00a7 ---- 0000                                 ld          R0, #0
+00a8 ---- 0c81                                 st          R0, [#dusk2dawn/output/powerModeStatus]
+               ;?         gpioSetOutput(AUXIO_O_EN_RUN);
+00a9 ---- 740f                                 iobset      #(12 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (12 >> 3))]
+               ;?
+               ;?     } else if (input.enableLowPowerMode == 1) {
+00aa ---- 04b1                             jmp         /id0146
+               /id0144:
+00ab ---- 0877                             ld          R0, [#dusk2dawn/input/enableLowPowerMode]
+00ac ---- 8a01                             cmp         R0, #1
+00ad ---- be03                             bneq        /id0148
+               ;?
+               ;?         // Set power mode to low power mode and disable 8.2 V power supply
+               ;?         output.powerModeStatus = 1;
+00ae ---- 0001                                 ld          R0, #1
+00af ---- 0c81                                 st          R0, [#dusk2dawn/output/powerModeStatus]
+               ;?         gpioClearOutput(AUXIO_O_EN_RUN);
+00b0 ---- 540f                                 iobclr      #(12 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (12 >> 3))]
+               ;?
+               ;?     } else {
+               ;?
+               ;?         // Bad lowPowerMode input, keep current mode
+               ;?
+               ;?     }
+               /id0148:
+               /id0146:
+               ;?
+               ;? }
+               /id0141:
+               ;?
+               ;? // Check if desired duty cycle is not the current duty cycle
+               ;? if (input.setDutyCycle != output.dutyCycleStatus) {
+00b1 ---- 0878                         ld          R0, [#dusk2dawn/input/setDutyCycle]
+00b2 ---- 187f                         ld          R1, [#dusk2dawn/output/dutyCycleStatus]
+00b3 ---- 8d29                         cmp         R0, R1
+00b4 ---- b605                         beq         /id0151
+               ;?
+               ;?     // Set duty cycle to desired value if it is valid
+               ;?     if (input.setDutyCycle <= 5) {
+00b5 ---- 0878                             ld          R0, [#dusk2dawn/input/setDutyCycle]
+00b6 ---- 8a05                             cmp         R0, #5
+00b7 ---- 9602                             bgtu        /id0154
+               ;?
+               ;?         // Set duty cycle to the selected input
+               ;?         output.dutyCycleStatus = input.setDutyCycle;
+00b8 ---- 0878                                 ld          R0, [#dusk2dawn/input/setDutyCycle]
+00b9 ---- 0c7f                                 st          R0, [#dusk2dawn/output/dutyCycleStatus]
+               ;?
+               ;?     } else {
+               ;?
+               ;?         // Bad setDutyCycle input, keep current duty cycle
+               ;?
+               ;?     }
+               /id0154:
+               ;?
+               ;? }
+               /id0151:
+               ;?
+               ;? // ----------------------------------------------------------
+               ;? // Sample analog and digital inputs that are not the fNIR LED
+               ;? // ----------------------------------------------------------
+               ;?
+               ;? // Increment the loop number
+               ;? state.loop = state.loop + 1;
+00ba ---- 0884                         ld          R0, [#dusk2dawn/state/loop]
+00bb ---- 8801                         add         R0, #1
+00bc ---- 0c84                         st          R0, [#dusk2dawn/state/loop]
+               ;?
+               ;? // Sample battery voltage only once every 30 loops (Once every three seconds)
+               ;? if (state.loop > 29) {
+00bd ---- 0884                         ld          R0, [#dusk2dawn/state/loop]
+00be ---- 8a1d                         cmp         R0, #29
+00bf ---- 9e21                         bleu        /id0158
+               ;?
+               ;?     // Reset loop number
+               ;?     state.loop = 0;
+00c0 ---- 0000                             ld          R0, #0
+00c1 ---- 0c84                             st          R0, [#dusk2dawn/state/loop]
+               ;?
+               ;?     // Select Battery Monitor as the ADC input
+               ;?     adcSelectGpioInput(AUXIO_A_BAT_MON);
+00c2 ---- 7007                             ld          R7, #7
+00c3 ---- 164b                             jsr         AdccompbSelectGpioInput
+               ;?
+               ;?     // Enable the ADC (fixed reference, 2.7 us sample time, manual trigger)
+               ;?     adcEnableSync(ADC_REF_FIXED, ADC_SAMPLE_TIME_2P7_US, ADC_TRIGGER_MANUAL);
+00c4 ---- f502                             loop        #128, /id0164
+00c5 ---- fd47                             nop
+00c6 ---- fd47                             nop
+00c7 ---- fd47                             nop
+               /id0164:
+00c8 ---- 7041                             ld          R7, #((0 | (((3 < 6) & (!0)) * ADI16_ADCREF_REF_ON_IDLE)) | ADI16_ADCREF_EN)
+00c9 ---- 1462                             jsr         AdiDdiAcquire
+00ca ---- fb4d                             out         R7, [#IOP_ADISET_ADCREF]
+00cb 8609 7101                             ld          R7, #((9 << IOB_ANAIF_ADCCTL_START_SRC) | 0x0001)
+00cd ---- 6431                             iobset      #IOB_WUC_ADCCLKCTL_REQ, [#IOP_WUC_ADCCLKCTL]
+               /id0165:
+00ce ---- 2531                             iobtst      #IOB_WUC_ADCCLKCTL_ACK, [#IOP_WUC_ADCCLKCTL]
+00cf ---- a6fe                             biob0       /id0165
+00d0 ---- fb00                             out         R7, [#IOP_ANAIF_ADCCTL]
+00d1 ---- 7078                             ld          R7, #BV_ADI16_ADC_SMPL_CYCLE_EXP
+00d2 ---- fb54                             out         R7, [#IOP_ADICLR_ADC]
+00d3 ---- 7018                             ld          R7, #(3 << BI_ADI16_ADC_SMPL_CYCLE_EXP)
+00d4 ---- fb4c                             out         R7, [#IOP_ADISET_ADC]
+00d5 ---- 7003                             ld          R7, #(ADI16_ADC_EN | ADI16_ADC_RESET_N)
+00d6 ---- fb4c                             out         R7, [#IOP_ADISET_ADC]
+00d7 ---- fd47                             nop
+00d8 ---- fb4c                             out         R7, [#IOP_ADISET_ADC]
+00d9 ---- 1465                             jsr         AdiDdiRelease
+               ;?
+               ;?     // Sample the sensor and store the ADC value in batteryValue
+               ;?     adcGenManualTrigger();
+00da ---- 6403                             iobset      #0, [#IOP_ANAIF_ADCTRIG]
+               ;?     adcReadFifo(output.batteryValue);
+00db ---- 001f                             ld          R0, #EVCTL_SCEEVSEL_ADC_FIFO_NOT_EMPTY
+00dc ---- 8b2c                             out         R0, [#IOP_EVCTL_SCEWEVSEL]
+00dd ---- fdb1                             wev1        #WEVSEL_PROG
+00de ---- 8902                             in          R0, [#IOP_ANAIF_ADCFIFO]
+00df ---- 0c7d                             st          R0, [#dusk2dawn/output/batteryValue]
+               ;?
+               ;?     // Disable the ADC
+               ;?     adcDisable();
+00e0 ---- 1658                             jsr         AdcDisable
+               ;?
+               ;? }
+               /id0158:
+               ;?
+               ;? // Read charge controller voltage and store in chargeValue
+               ;? gpioGetInputValue(AUXIO_I_CHG_MON; output.chargeValue);
+00e1 ---- 5006                         ld          R5, #6
+00e2 ---- 1644                         jsr         gpioGetInputValue
+00e3 ---- 7c7e                         st          R7, [#dusk2dawn/output/chargeValue]
+               ;?
+               ;? // Read USB power monitor voltage and store in usbValue
+               ;? gpioGetInputValue(AUXIO_I_USB_MON; output.usbValue);
+00e4 ---- 5004                         ld          R5, #4
+00e5 ---- 1644                         jsr         gpioGetInputValue
+00e6 ---- 7c83                         st          R7, [#dusk2dawn/output/usbValue]
+               ;?
+               ;? // Read power good monitor and store in powerValue
+               ;? gpioGetInputValue(AUXIO_I_PG_MON; output.powerValue);
+00e7 ---- 500b                         ld          R5, #11
+00e8 ---- 1644                         jsr         gpioGetInputValue
+00e9 ---- 7c82                         st          R7, [#dusk2dawn/output/powerValue]
+               ;?
+               ;? // Wait 20 ms
+               ;? fwDelayUs(20000, FW_DELAY_RANGE_100_MS);
+00ea ---- 701e                         ld          R7, #(((20000 * 24 ) + ((1 << 14) - 1)) >> 14)
+00eb ---- 600e                         ld          R6, #14
+00ec ---- 163e                         jsr         FwDelay
+               ;?
+               ;? // -----------------------------
+               ;? // Sample analog fNIR LED values
+               ;? // -----------------------------
+               ;?
+               ;? // Update values in normal mode, set values to zero in low power mode
+               ;? if (output.powerModeStatus == 0) {
+00ed ---- 0881                         ld          R0, [#dusk2dawn/output/powerModeStatus]
+00ee ---- 8a00                         cmp         R0, #0
+00ef ---- b601                         beq         /br0000 ; Repaired out-of-range bneq
+00f0 ---- 0604                         jmp         /id0185
+               /br0000:
+               ;?
+               ;?     // Update values only if power supply reports it is on, otherwise keep previous values
+               ;?     if (output.powerValue == 1) {
+00f1 ---- 0882                             ld          R0, [#dusk2dawn/output/powerValue]
+00f2 ---- 8a01                             cmp         R0, #1
+00f3 ---- b601                             beq         /br0001 ; Repaired out-of-range bneq
+00f4 ---- 0603                             jmp         /id0188
+               /br0001:
+               ;?
+               ;?         // --------------------------------------------------------------------------------------------------------
+               ;?         // Read from Sensor 1 at 730 nm and store in adcValue1, Read from Sensor 2 at 730 nm and store in adcValue2
+               ;?         // --------------------------------------------------------------------------------------------------------
+               ;?
+               ;?         // Turn on 730 nm LED according to desired duty cycle (For 30ms if a pulse train)
+               ;?         if (output.dutyCycleStatus == 0) {
+00f5 ---- 087f                                 ld          R0, [#dusk2dawn/output/dutyCycleStatus]
+00f6 ---- 8a00                                 cmp         R0, #0
+00f7 ---- be02                                 bneq        /id0190
+               ;?             gpioClearOutput(AUXIO_O_EN_730);
+00f8 ---- 440e                                     iobclr      #(0 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (0 >> 3))]
+               ;?         } else if (output.dutyCycleStatus == 1) {
+00f9 ---- 0537                                 jmp         /id0192
+               /id0190:
+00fa ---- 087f                                 ld          R0, [#dusk2dawn/output/dutyCycleStatus]
+00fb ---- 8a01                                 cmp         R0, #1
+00fc ---- be0b                                 bneq        /id0193
+               ;?             gpioGenPulseTrain(AUXIO_O_EN_730, 1, 2, 8, 36000);
+00fd 868c 00a0                                     ld          R0, #-29536
+               /id0196:
+00ff ---- 640e                                     iobset      #(0 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (0 >> 3))]
+0100 ---- fd47                                     nop
+               /id0197:
+0101 ---- 440e                                     iobclr      #(0 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (0 >> 3))]
+0102 ---- 1003                                     ld          R1, #(8 - 5)
+0103 ---- 8500                                     loop        R1, /id0198
+0104 ---- fd47                                     nop
+               /id0198:
+0105 ---- 88ff                                     add         R0, #-1
+0106 ---- bef8                                     bnz         /id0196
+               ;?         } else if (output.dutyCycleStatus == 2) {
+0107 ---- 0537                                 jmp         /id0195
+               /id0193:
+0108 ---- 087f                                 ld          R0, [#dusk2dawn/output/dutyCycleStatus]
+0109 ---- 8a02                                 cmp         R0, #2
+010a ---- be0d                                 bneq        /id0201
+               ;?             gpioGenPulseTrain(AUXIO_O_EN_730, 1, 4, 6, 36000);
+010b 868c 00a0                                     ld          R0, #-29536
+               /id0204:
+010d ---- 640e                                     iobset      #(0 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (0 >> 3))]
+010e ---- 1001                                     ld          R1, #(4 - 3)
+010f ---- 8500                                     loop        R1, /id0205
+0110 ---- fd47                                     nop
+               /id0205:
+0111 ---- 440e                                     iobclr      #(0 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (0 >> 3))]
+0112 ---- 1001                                     ld          R1, #(6 - 5)
+0113 ---- 8500                                     loop        R1, /id0206
+0114 ---- fd47                                     nop
+               /id0206:
+0115 ---- 88ff                                     add         R0, #-1
+0116 ---- bef6                                     bnz         /id0204
+               ;?         } else if (output.dutyCycleStatus == 3) {
+0117 ---- 0537                                 jmp         /id0203
+               /id0201:
+0118 ---- 087f                                 ld          R0, [#dusk2dawn/output/dutyCycleStatus]
+0119 ---- 8a03                                 cmp         R0, #3
+011a ---- be0d                                 bneq        /id0209
+               ;?             gpioGenPulseTrain(AUXIO_O_EN_730, 0, 4, 6, 36000);
+011b 868c 00a0                                     ld          R0, #-29536
+               /id0212:
+011d ---- 440e                                     iobclr      #(0 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (0 >> 3))]
+011e ---- 1001                                     ld          R1, #(4 - 3)
+011f ---- 8500                                     loop        R1, /id0213
+0120 ---- fd47                                     nop
+               /id0213:
+0121 ---- 640e                                     iobset      #(0 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (0 >> 3))]
+0122 ---- 1001                                     ld          R1, #(6 - 5)
+0123 ---- 8500                                     loop        R1, /id0214
+0124 ---- fd47                                     nop
+               /id0214:
+0125 ---- 88ff                                     add         R0, #-1
+0126 ---- bef6                                     bnz         /id0212
+               ;?         } else if (output.dutyCycleStatus == 4) {
+0127 ---- 0537                                 jmp         /id0211
+               /id0209:
+0128 ---- 087f                                 ld          R0, [#dusk2dawn/output/dutyCycleStatus]
+0129 ---- 8a04                                 cmp         R0, #4
+012a ---- be0b                                 bneq        /id0217
+               ;?             gpioGenPulseTrain(AUXIO_O_EN_730, 0, 2, 8, 36000);
+012b 868c 00a0                                     ld          R0, #-29536
+               /id0220:
+012d ---- 440e                                     iobclr      #(0 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (0 >> 3))]
+012e ---- fd47                                     nop
+               /id0221:
+012f ---- 640e                                     iobset      #(0 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (0 >> 3))]
+0130 ---- 1003                                     ld          R1, #(8 - 5)
+0131 ---- 8500                                     loop        R1, /id0222
+0132 ---- fd47                                     nop
+               /id0222:
+0133 ---- 88ff                                     add         R0, #-1
+0134 ---- bef8                                     bnz         /id0220
+               ;?         } else {
+0135 ---- 0537                                 jmp         /id0219
+               /id0217:
+               ;?             gpioSetOutput(AUXIO_O_EN_730);
+0136 ---- 640e                                     iobset      #(0 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (0 >> 3))]
+               ;?         }
+               /id0219:
+               /id0211:
+               /id0203:
+               /id0195:
+               /id0192:
+               ;?
+               ;?         // Wait 20 ms
+               ;?         fwDelayUs(20000, FW_DELAY_RANGE_100_MS);
+0137 ---- 701e                                 ld          R7, #(((20000 * 24 ) + ((1 << 14) - 1)) >> 14)
+0138 ---- 600e                                 ld          R6, #14
+0139 ---- 163e                                 jsr         FwDelay
+               ;?
+               ;?         // Select Sensor 1 as the ADC input
+               ;?         adcSelectGpioInput(AUXIO_A_SEN1);
+013a ---- 7001                                 ld          R7, #1
+013b ---- 164b                                 jsr         AdccompbSelectGpioInput
+               ;?
+               ;?         // Enable the ADC (fixed reference, 2.7 us sample time, manual trigger)
+               ;?         adcEnableSync(ADC_REF_FIXED, ADC_SAMPLE_TIME_2P7_US, ADC_TRIGGER_MANUAL);
+013c ---- f502                                 loop        #128, /id0230
+013d ---- fd47                                 nop
+013e ---- fd47                                 nop
+013f ---- fd47                                 nop
+               /id0230:
+0140 ---- 7041                                 ld          R7, #((0 | (((3 < 6) & (!0)) * ADI16_ADCREF_REF_ON_IDLE)) | ADI16_ADCREF_EN)
+0141 ---- 1462                                 jsr         AdiDdiAcquire
+0142 ---- fb4d                                 out         R7, [#IOP_ADISET_ADCREF]
+0143 8609 7101                                 ld          R7, #((9 << IOB_ANAIF_ADCCTL_START_SRC) | 0x0001)
+0145 ---- 6431                                 iobset      #IOB_WUC_ADCCLKCTL_REQ, [#IOP_WUC_ADCCLKCTL]
+               /id0231:
+0146 ---- 2531                                 iobtst      #IOB_WUC_ADCCLKCTL_ACK, [#IOP_WUC_ADCCLKCTL]
+0147 ---- a6fe                                 biob0       /id0231
+0148 ---- fb00                                 out         R7, [#IOP_ANAIF_ADCCTL]
+0149 ---- 7078                                 ld          R7, #BV_ADI16_ADC_SMPL_CYCLE_EXP
+014a ---- fb54                                 out         R7, [#IOP_ADICLR_ADC]
+014b ---- 7018                                 ld          R7, #(3 << BI_ADI16_ADC_SMPL_CYCLE_EXP)
+014c ---- fb4c                                 out         R7, [#IOP_ADISET_ADC]
+014d ---- 7003                                 ld          R7, #(ADI16_ADC_EN | ADI16_ADC_RESET_N)
+014e ---- fb4c                                 out         R7, [#IOP_ADISET_ADC]
+014f ---- fd47                                 nop
+0150 ---- fb4c                                 out         R7, [#IOP_ADISET_ADC]
+0151 ---- 1465                                 jsr         AdiDdiRelease
+               ;?
+               ;?         // Sample the sensor and store the ADC value
+               ;?         adcGenManualTrigger();
+0152 ---- 6403                                 iobset      #0, [#IOP_ANAIF_ADCTRIG]
+               ;?         adcReadFifo(output.adcValue1);
+0153 ---- 001f                                 ld          R0, #EVCTL_SCEEVSEL_ADC_FIFO_NOT_EMPTY
+0154 ---- 8b2c                                 out         R0, [#IOP_EVCTL_SCEWEVSEL]
+0155 ---- fdb1                                 wev1        #WEVSEL_PROG
+0156 ---- 8902                                 in          R0, [#IOP_ANAIF_ADCFIFO]
+0157 ---- 0c79                                 st          R0, [#dusk2dawn/output/adcValue1]
+               ;?
+               ;?         // Disable the ADC
+               ;?         adcDisable();
+0158 ---- 1658                                 jsr         AdcDisable
+               ;?
+               ;?         // Select Sensor 2 as the ADC input
+               ;?         adcSelectGpioInput(AUXIO_A_SEN2);
+0159 ---- 7003                                 ld          R7, #3
+015a ---- 164b                                 jsr         AdccompbSelectGpioInput
+               ;?
+               ;?         // Enable the ADC (fixed reference, 2.7 us sample time, manual trigger)
+               ;?         adcEnableSync(ADC_REF_FIXED, ADC_SAMPLE_TIME_2P7_US, ADC_TRIGGER_MANUAL);
+015b ---- f502                                 loop        #128, /id0240
+015c ---- fd47                                 nop
+015d ---- fd47                                 nop
+015e ---- fd47                                 nop
+               /id0240:
+015f ---- 7041                                 ld          R7, #((0 | (((3 < 6) & (!0)) * ADI16_ADCREF_REF_ON_IDLE)) | ADI16_ADCREF_EN)
+0160 ---- 1462                                 jsr         AdiDdiAcquire
+0161 ---- fb4d                                 out         R7, [#IOP_ADISET_ADCREF]
+0162 8609 7101                                 ld          R7, #((9 << IOB_ANAIF_ADCCTL_START_SRC) | 0x0001)
+0164 ---- 6431                                 iobset      #IOB_WUC_ADCCLKCTL_REQ, [#IOP_WUC_ADCCLKCTL]
+               /id0241:
+0165 ---- 2531                                 iobtst      #IOB_WUC_ADCCLKCTL_ACK, [#IOP_WUC_ADCCLKCTL]
+0166 ---- a6fe                                 biob0       /id0241
+0167 ---- fb00                                 out         R7, [#IOP_ANAIF_ADCCTL]
+0168 ---- 7078                                 ld          R7, #BV_ADI16_ADC_SMPL_CYCLE_EXP
+0169 ---- fb54                                 out         R7, [#IOP_ADICLR_ADC]
+016a ---- 7018                                 ld          R7, #(3 << BI_ADI16_ADC_SMPL_CYCLE_EXP)
+016b ---- fb4c                                 out         R7, [#IOP_ADISET_ADC]
+016c ---- 7003                                 ld          R7, #(ADI16_ADC_EN | ADI16_ADC_RESET_N)
+016d ---- fb4c                                 out         R7, [#IOP_ADISET_ADC]
+016e ---- fd47                                 nop
+016f ---- fb4c                                 out         R7, [#IOP_ADISET_ADC]
+0170 ---- 1465                                 jsr         AdiDdiRelease
+               ;?
+               ;?         // Sample the sensor and store the ADC value
+               ;?         adcGenManualTrigger();
+0171 ---- 6403                                 iobset      #0, [#IOP_ANAIF_ADCTRIG]
+               ;?         adcReadFifo(output.adcValue2);
+0172 ---- 001f                                 ld          R0, #EVCTL_SCEEVSEL_ADC_FIFO_NOT_EMPTY
+0173 ---- 8b2c                                 out         R0, [#IOP_EVCTL_SCEWEVSEL]
+0174 ---- fdb1                                 wev1        #WEVSEL_PROG
+0175 ---- 8902                                 in          R0, [#IOP_ANAIF_ADCFIFO]
+0176 ---- 0c7a                                 st          R0, [#dusk2dawn/output/adcValue2]
+               ;?
+               ;?         // Disable the ADC
+               ;?         adcDisable();
+0177 ---- 1658                                 jsr         AdcDisable
+               ;?
+               ;?         // Turn off 730 nm on fNIR LED
+               ;?         gpioClearOutput(AUXIO_O_EN_730);
+0178 ---- 440e                                 iobclr      #(0 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (0 >> 3))]
+               ;?
+               ;?         // Wait 20 ms
+               ;?         fwDelayUs(20000, FW_DELAY_RANGE_100_MS);
+0179 ---- 701e                                 ld          R7, #(((20000 * 24 ) + ((1 << 14) - 1)) >> 14)
+017a ---- 600e                                 ld          R6, #14
+017b ---- 163e                                 jsr         FwDelay
+               ;?
+               ;?         // --------------------------------------------------------------------------------------------------------
+               ;?         // Read from Sensor 1 at 850 nm and store in adcValue3, Read from Sensor 2 at 850 nm and store in adcValue4
+               ;?         // --------------------------------------------------------------------------------------------------------
+               ;?
+               ;?         // Turn on 850 nm LED according to desired duty cycle (For 30ms if a pulse train)
+               ;?         if (output.dutyCycleStatus == 0) {
+017c ---- 087f                                 ld          R0, [#dusk2dawn/output/dutyCycleStatus]
+017d ---- 8a00                                 cmp         R0, #0
+017e ---- be02                                 bneq        /id0249
+               ;?             gpioClearOutput(AUXIO_O_EN_850);
+017f ---- 460e                                     iobclr      #(2 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (2 >> 3))]
+               ;?         } else if (output.dutyCycleStatus == 1) {
+0180 ---- 05be                                 jmp         /id0251
+               /id0249:
+0181 ---- 087f                                 ld          R0, [#dusk2dawn/output/dutyCycleStatus]
+0182 ---- 8a01                                 cmp         R0, #1
+0183 ---- be0b                                 bneq        /id0252
+               ;?             gpioGenPulseTrain(AUXIO_O_EN_850, 1, 2, 8, 36000);
+0184 868c 00a0                                     ld          R0, #-29536
+               /id0255:
+0186 ---- 660e                                     iobset      #(2 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (2 >> 3))]
+0187 ---- fd47                                     nop
+               /id0256:
+0188 ---- 460e                                     iobclr      #(2 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (2 >> 3))]
+0189 ---- 1003                                     ld          R1, #(8 - 5)
+018a ---- 8500                                     loop        R1, /id0257
+018b ---- fd47                                     nop
+               /id0257:
+018c ---- 88ff                                     add         R0, #-1
+018d ---- bef8                                     bnz         /id0255
+               ;?         } else if (output.dutyCycleStatus == 2) {
+018e ---- 05be                                 jmp         /id0254
+               /id0252:
+018f ---- 087f                                 ld          R0, [#dusk2dawn/output/dutyCycleStatus]
+0190 ---- 8a02                                 cmp         R0, #2
+0191 ---- be0d                                 bneq        /id0260
+               ;?             gpioGenPulseTrain(AUXIO_O_EN_850, 1, 4, 6, 36000);
+0192 868c 00a0                                     ld          R0, #-29536
+               /id0263:
+0194 ---- 660e                                     iobset      #(2 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (2 >> 3))]
+0195 ---- 1001                                     ld          R1, #(4 - 3)
+0196 ---- 8500                                     loop        R1, /id0264
+0197 ---- fd47                                     nop
+               /id0264:
+0198 ---- 460e                                     iobclr      #(2 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (2 >> 3))]
+0199 ---- 1001                                     ld          R1, #(6 - 5)
+019a ---- 8500                                     loop        R1, /id0265
+019b ---- fd47                                     nop
+               /id0265:
+019c ---- 88ff                                     add         R0, #-1
+019d ---- bef6                                     bnz         /id0263
+               ;?         } else if (output.dutyCycleStatus == 3) {
+019e ---- 05be                                 jmp         /id0262
+               /id0260:
+019f ---- 087f                                 ld          R0, [#dusk2dawn/output/dutyCycleStatus]
+01a0 ---- 8a03                                 cmp         R0, #3
+01a1 ---- be0d                                 bneq        /id0268
+               ;?             gpioGenPulseTrain(AUXIO_O_EN_850, 0, 4, 6, 36000);
+01a2 868c 00a0                                     ld          R0, #-29536
+               /id0271:
+01a4 ---- 460e                                     iobclr      #(2 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (2 >> 3))]
+01a5 ---- 1001                                     ld          R1, #(4 - 3)
+01a6 ---- 8500                                     loop        R1, /id0272
+01a7 ---- fd47                                     nop
+               /id0272:
+01a8 ---- 660e                                     iobset      #(2 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (2 >> 3))]
+01a9 ---- 1001                                     ld          R1, #(6 - 5)
+01aa ---- 8500                                     loop        R1, /id0273
+01ab ---- fd47                                     nop
+               /id0273:
+01ac ---- 88ff                                     add         R0, #-1
+01ad ---- bef6                                     bnz         /id0271
+               ;?         } else if (output.dutyCycleStatus == 4) {
+01ae ---- 05be                                 jmp         /id0270
+               /id0268:
+01af ---- 087f                                 ld          R0, [#dusk2dawn/output/dutyCycleStatus]
+01b0 ---- 8a04                                 cmp         R0, #4
+01b1 ---- be0b                                 bneq        /id0276
+               ;?             gpioGenPulseTrain(AUXIO_O_EN_850, 0, 2, 8, 36000);
+01b2 868c 00a0                                     ld          R0, #-29536
+               /id0279:
+01b4 ---- 460e                                     iobclr      #(2 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (2 >> 3))]
+01b5 ---- fd47                                     nop
+               /id0280:
+01b6 ---- 660e                                     iobset      #(2 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (2 >> 3))]
+01b7 ---- 1003                                     ld          R1, #(8 - 5)
+01b8 ---- 8500                                     loop        R1, /id0281
+01b9 ---- fd47                                     nop
+               /id0281:
+01ba ---- 88ff                                     add         R0, #-1
+01bb ---- bef8                                     bnz         /id0279
+               ;?         } else {
+01bc ---- 05be                                 jmp         /id0278
+               /id0276:
+               ;?             gpioSetOutput(AUXIO_O_EN_850);
+01bd ---- 660e                                     iobset      #(2 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (2 >> 3))]
+               ;?         }
+               /id0278:
+               /id0270:
+               /id0262:
+               /id0254:
+               /id0251:
+               ;?
+               ;?         // Wait 20 ms
+               ;?         fwDelayUs(20000, FW_DELAY_RANGE_100_MS);
+01be ---- 701e                                 ld          R7, #(((20000 * 24 ) + ((1 << 14) - 1)) >> 14)
+01bf ---- 600e                                 ld          R6, #14
+01c0 ---- 163e                                 jsr         FwDelay
+               ;?
+               ;?         // Select Sensor 1 as the ADC input
+               ;?         adcSelectGpioInput(AUXIO_A_SEN1);
+01c1 ---- 7001                                 ld          R7, #1
+01c2 ---- 164b                                 jsr         AdccompbSelectGpioInput
+               ;?
+               ;?         // Enable the ADC (fixed reference, 2.7 us sample time, manual trigger)
+               ;?         adcEnableSync(ADC_REF_FIXED, ADC_SAMPLE_TIME_2P7_US, ADC_TRIGGER_MANUAL);
+01c3 ---- f502                                 loop        #128, /id0289
+01c4 ---- fd47                                 nop
+01c5 ---- fd47                                 nop
+01c6 ---- fd47                                 nop
+               /id0289:
+01c7 ---- 7041                                 ld          R7, #((0 | (((3 < 6) & (!0)) * ADI16_ADCREF_REF_ON_IDLE)) | ADI16_ADCREF_EN)
+01c8 ---- 1462                                 jsr         AdiDdiAcquire
+01c9 ---- fb4d                                 out         R7, [#IOP_ADISET_ADCREF]
+01ca 8609 7101                                 ld          R7, #((9 << IOB_ANAIF_ADCCTL_START_SRC) | 0x0001)
+01cc ---- 6431                                 iobset      #IOB_WUC_ADCCLKCTL_REQ, [#IOP_WUC_ADCCLKCTL]
+               /id0290:
+01cd ---- 2531                                 iobtst      #IOB_WUC_ADCCLKCTL_ACK, [#IOP_WUC_ADCCLKCTL]
+01ce ---- a6fe                                 biob0       /id0290
+01cf ---- fb00                                 out         R7, [#IOP_ANAIF_ADCCTL]
+01d0 ---- 7078                                 ld          R7, #BV_ADI16_ADC_SMPL_CYCLE_EXP
+01d1 ---- fb54                                 out         R7, [#IOP_ADICLR_ADC]
+01d2 ---- 7018                                 ld          R7, #(3 << BI_ADI16_ADC_SMPL_CYCLE_EXP)
+01d3 ---- fb4c                                 out         R7, [#IOP_ADISET_ADC]
+01d4 ---- 7003                                 ld          R7, #(ADI16_ADC_EN | ADI16_ADC_RESET_N)
+01d5 ---- fb4c                                 out         R7, [#IOP_ADISET_ADC]
+01d6 ---- fd47                                 nop
+01d7 ---- fb4c                                 out         R7, [#IOP_ADISET_ADC]
+01d8 ---- 1465                                 jsr         AdiDdiRelease
+               ;?
+               ;?         // Sample the sensor and store the ADC value
+               ;?         adcGenManualTrigger();
+01d9 ---- 6403                                 iobset      #0, [#IOP_ANAIF_ADCTRIG]
+               ;?         adcReadFifo(output.adcValue3);
+01da ---- 001f                                 ld          R0, #EVCTL_SCEEVSEL_ADC_FIFO_NOT_EMPTY
+01db ---- 8b2c                                 out         R0, [#IOP_EVCTL_SCEWEVSEL]
+01dc ---- fdb1                                 wev1        #WEVSEL_PROG
+01dd ---- 8902                                 in          R0, [#IOP_ANAIF_ADCFIFO]
+01de ---- 0c7b                                 st          R0, [#dusk2dawn/output/adcValue3]
+               ;?
+               ;?         // Disable the ADC
+               ;?         adcDisable();
+01df ---- 1658                                 jsr         AdcDisable
+               ;?
+               ;?         // Select Sensor 2 as the ADC input
+               ;?         adcSelectGpioInput(AUXIO_A_SEN2);
+01e0 ---- 7003                                 ld          R7, #3
+01e1 ---- 164b                                 jsr         AdccompbSelectGpioInput
+               ;?
+               ;?         // Enable the ADC (fixed reference, 2.7 us sample time, manual trigger)
+               ;?         adcEnableSync(ADC_REF_FIXED, ADC_SAMPLE_TIME_2P7_US, ADC_TRIGGER_MANUAL);
+01e2 ---- f502                                 loop        #128, /id0299
+01e3 ---- fd47                                 nop
+01e4 ---- fd47                                 nop
+01e5 ---- fd47                                 nop
+               /id0299:
+01e6 ---- 7041                                 ld          R7, #((0 | (((3 < 6) & (!0)) * ADI16_ADCREF_REF_ON_IDLE)) | ADI16_ADCREF_EN)
+01e7 ---- 1462                                 jsr         AdiDdiAcquire
+01e8 ---- fb4d                                 out         R7, [#IOP_ADISET_ADCREF]
+01e9 8609 7101                                 ld          R7, #((9 << IOB_ANAIF_ADCCTL_START_SRC) | 0x0001)
+01eb ---- 6431                                 iobset      #IOB_WUC_ADCCLKCTL_REQ, [#IOP_WUC_ADCCLKCTL]
+               /id0300:
+01ec ---- 2531                                 iobtst      #IOB_WUC_ADCCLKCTL_ACK, [#IOP_WUC_ADCCLKCTL]
+01ed ---- a6fe                                 biob0       /id0300
+01ee ---- fb00                                 out         R7, [#IOP_ANAIF_ADCCTL]
+01ef ---- 7078                                 ld          R7, #BV_ADI16_ADC_SMPL_CYCLE_EXP
+01f0 ---- fb54                                 out         R7, [#IOP_ADICLR_ADC]
+01f1 ---- 7018                                 ld          R7, #(3 << BI_ADI16_ADC_SMPL_CYCLE_EXP)
+01f2 ---- fb4c                                 out         R7, [#IOP_ADISET_ADC]
+01f3 ---- 7003                                 ld          R7, #(ADI16_ADC_EN | ADI16_ADC_RESET_N)
+01f4 ---- fb4c                                 out         R7, [#IOP_ADISET_ADC]
+01f5 ---- fd47                                 nop
+01f6 ---- fb4c                                 out         R7, [#IOP_ADISET_ADC]
+01f7 ---- 1465                                 jsr         AdiDdiRelease
+               ;?
+               ;?         // Sample the sensor and store the ADC value
+               ;?         adcGenManualTrigger();
+01f8 ---- 6403                                 iobset      #0, [#IOP_ANAIF_ADCTRIG]
+               ;?         adcReadFifo(output.adcValue4);
+01f9 ---- 001f                                 ld          R0, #EVCTL_SCEEVSEL_ADC_FIFO_NOT_EMPTY
+01fa ---- 8b2c                                 out         R0, [#IOP_EVCTL_SCEWEVSEL]
+01fb ---- fdb1                                 wev1        #WEVSEL_PROG
+01fc ---- 8902                                 in          R0, [#IOP_ANAIF_ADCFIFO]
+01fd ---- 0c7c                                 st          R0, [#dusk2dawn/output/adcValue4]
+               ;?
+               ;?         // Disable the ADC
+               ;?         adcDisable();
+01fe ---- 1658                                 jsr         AdcDisable
+               ;?
+               ;?         // Turn off 850 nm on fNIR LED
+               ;?         gpioClearOutput(AUXIO_O_EN_850);
+01ff ---- 460e                                 iobclr      #(2 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (2 >> 3))]
+               ;?
+               ;?         // Wait 20 ms
+               ;?         fwDelayUs(20000, FW_DELAY_RANGE_100_MS);
+0200 ---- 701e                                 ld          R7, #(((20000 * 24 ) + ((1 << 14) - 1)) >> 14)
+0201 ---- 600e                                 ld          R6, #14
+0202 ---- 163e                                 jsr         FwDelay
+               ;?
+               ;?     }
+               /id0188:
+               ;?
+               ;? } else {
+0203 ---- 060c                         jmp         /id0187
+               /id0185:
+               ;?
+               ;?     // Set default ADC values
+               ;?     output.adcValue1 = 0;
+0204 ---- 0000                             ld          R0, #0
+0205 ---- 0c79                             st          R0, [#dusk2dawn/output/adcValue1]
+               ;?     output.adcValue2 = 0;
+0206 ---- 0000                             ld          R0, #0
+0207 ---- 0c7a                             st          R0, [#dusk2dawn/output/adcValue2]
+               ;?     output.adcValue3 = 0;
+0208 ---- 0000                             ld          R0, #0
+0209 ---- 0c7b                             st          R0, [#dusk2dawn/output/adcValue3]
+               ;?     output.adcValue4 = 0;
+020a ---- 0000                             ld          R0, #0
+020b ---- 0c7c                             st          R0, [#dusk2dawn/output/adcValue4]
+               ;?
+               ;? }
+               /id0187:
+               ;?
+               ;? // ----------------------
+               ;? // Set low battery status
+               ;? // ----------------------
+               ;?
+               ;? // Determine if battery is low or not with hysteresis
+               ;? if (output.lowBatteryStatus == 0) {
+020c ---- 0880                         ld          R0, [#dusk2dawn/output/lowBatteryStatus]
+020d ---- 8a00                         cmp         R0, #0
+020e ---- be07                         bneq        /id0312
+               ;?
+               ;?     // If battery level drops too low, battery is low
+               ;?     if (output.batteryValue < cfg.lowBatteryStart) {
+020f ---- 087d                             ld          R0, [#dusk2dawn/output/batteryValue]
+0210 ---- 1876                             ld          R1, [#dusk2dawn/cfg/lowBatteryStart]
+0211 ---- 8d29                             cmp         R0, R1
+0212 ---- a602                             bgeu        /id0315
+               ;?         output.lowBatteryStatus = 1;
+0213 ---- 0001                                 ld          R0, #1
+0214 ---- 0c80                                 st          R0, [#dusk2dawn/output/lowBatteryStatus]
+               ;?     }
+               /id0315:
+               ;?
+               ;? } else if (output.lowBatteryStatus == 1) {
+0215 ---- 0622                         jmp         /id0314
+               /id0312:
+0216 ---- 0880                         ld          R0, [#dusk2dawn/output/lowBatteryStatus]
+0217 ---- 8a01                         cmp         R0, #1
+0218 ---- be07                         bneq        /id0319
+               ;?
+               ;?     // If battery level goes high, battery is no longer low
+               ;?     if (output.batteryValue > cfg.lowBatteryEnd) {
+0219 ---- 087d                             ld          R0, [#dusk2dawn/output/batteryValue]
+021a ---- 1875                             ld          R1, [#dusk2dawn/cfg/lowBatteryEnd]
+021b ---- 8d29                             cmp         R0, R1
+021c ---- 9e02                             bleu        /id0322
+               ;?         output.lowBatteryStatus = 0;
+021d ---- 0000                                 ld          R0, #0
+021e ---- 0c80                                 st          R0, [#dusk2dawn/output/lowBatteryStatus]
+               ;?     }
+               /id0322:
+               ;?
+               ;? } else {
+021f ---- 0622                         jmp         /id0321
+               /id0319:
+               ;?
+               ;?     // Weird state happened, reset lowBattery
+               ;?     output.lowBatteryStatus = 0;
+0220 ---- 0000                             ld          R0, #0
+0221 ---- 0c80                             st          R0, [#dusk2dawn/output/lowBatteryStatus]
+               ;?
+               ;? }
+               /id0321:
+               /id0314:
+               ;?
+               ;? // ------------------------------------------
+               ;? // Turn on or off green, yellow, and red LEDs
+               ;? // ------------------------------------------
+               ;?
+               ;? // Turn on green LED only when USB power is plugged in
+               ;? if (output.usbValue == 1) {
+0222 ---- 0883                         ld          R0, [#dusk2dawn/output/usbValue]
+0223 ---- 8a01                         cmp         R0, #1
+0224 ---- be02                         bneq        /id0327
+               ;?     gpioSetOutput(AUXIO_O_LED_G);
+0225 ---- 660f                             iobset      #(10 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (10 >> 3))]
+               ;? } else {
+0226 ---- 0628                         jmp         /id0329
+               /id0327:
+               ;?     gpioClearOutput(AUXIO_O_LED_G);
+0227 ---- 460f                             iobclr      #(10 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (10 >> 3))]
+               ;? }
+               /id0329:
+               ;?
+               ;? // Turn on yellow LED only when charge controller indictaes battery is charging
+               ;? if (output.chargeValue == 0) {
+0228 ---- 087e                         ld          R0, [#dusk2dawn/output/chargeValue]
+0229 ---- 8a00                         cmp         R0, #0
+022a ---- be02                         bneq        /id0330
+               ;?     gpioSetOutput(AUXIO_O_LED_Y);
+022b ---- 650f                             iobset      #(9 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (9 >> 3))]
+               ;? } else {
+022c ---- 062e                         jmp         /id0332
+               /id0330:
+               ;?     gpioClearOutput(AUXIO_O_LED_Y);
+022d ---- 450f                             iobclr      #(9 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (9 >> 3))]
+               ;? }
+               /id0332:
+               ;?
+               ;? // Turn on red LED only when battery level is low
+               ;? if (output.lowBatteryStatus == 1) {
+022e ---- 0880                         ld          R0, [#dusk2dawn/output/lowBatteryStatus]
+022f ---- 8a01                         cmp         R0, #1
+0230 ---- be02                         bneq        /id0333
+               ;?     gpioSetOutput(AUXIO_O_LED_R);
+0231 ---- 640f                             iobset      #(8 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (8 >> 3))]
+               ;? } else {
+0232 ---- 0634                         jmp         /id0335
+               /id0333:
+               ;?     gpioClearOutput(AUXIO_O_LED_R);
+0233 ---- 440f                             iobclr      #(8 & 0x7), [#(IOP_AIODIO0_GPIODOUT + (8 >> 3))]
+               ;? }
+               /id0335:
+               ;?
+               ;? // Wait 10 ms
+               ;? fwDelayUs(10000, FW_DELAY_RANGE_10_MS);
+0234 ---- 70eb                         ld          R7, #(((10000 * 24 ) + ((1 << 10) - 1)) >> 10)
+0235 ---- 600a                         ld          R6, #10
+0236 ---- 163e                         jsr         FwDelay
+               ;?
+               ;? // ---------------------
+               ;? // End of task execution
+               ;? // ---------------------
+               ;?
+               ;? // Generate alert
+               ;? fwGenAlertInterrupt();
+0237 ---- 086c                         ld          R0, [#fwCtrlInt/bvTaskIoAlert]
+0238 ---- 8201                         or          R0, #(1 << 0)
+0239 ---- 0c6c                         st          R0, [#fwCtrlInt/bvTaskIoAlert]
+               ;?
+               ;? // Schedule the next execution at the next RTC tick
+               ;? fwScheduleTask(1);
+023a ---- 0001                         ld          R0, #1
+023b ---- 0c67                         st          R0, [#(pFwTaskExecuteScheduleTable + 0)]
+               dusk2dawn/executeDone:
+023c ---- adb7                         rts
+
+
+
+
+               dusk2dawn/terminate:
+               ;?
+               dusk2dawn/terminateDone:
+023d ---- adb7                         rts
+               .segment end "Task: Dusk2Dawn"
+
+
+               .segment begin "Procedure Library"
+               ; 3 + 5 CPU cycles = 16 clock cycles = 0.66 microsecond are added to the specified delay (parameter
+               ; loading and timer configuration)
+               ;
+               ; PARAMETERS:
+               ;     R7 = Delay
+               ;     R6 = Prescaler exponent
+               ;
+               ; CLOBBERS:
+               ;     R6
+               FwDelay:
+                                       ; Set the delay
+023e ---- fb0c                         out         R7, [#IOP_TIMER01_T0TARGET]
+
+                                       ; Configure the timer (from clock, single-mode, prescaler exponent = R6)
+023f ---- eda4                         lsl         R6, #4
+0240 ---- eb09                         out         R6, [#IOP_TIMER01_T0CFG]
+
+                                       ; Start the timer, wait for it to trigger, and stop it
+0241 ---- 640b                         iobset      #0, [#IOP_TIMER01_T0CTL]
+0242 ---- cdb1                         wev1        #WEVSEL_TIMER0
+0243 ---- adb7                         rts
+
+
+
+
+               ; PARAMETERS:
+               ;     R5 = AUX I/O index
+               ;
+               ; CLOBBERS:
+               ;     R6, R7
+               gpioGetInputValue:
+                                       ; Get GPIOs 15:8
+0244 ---- e913                         in          R6, [#IOP_AIODIO1_GPIODIN]
+0245 ---- eda0                         lsl         R6, #8
+
+                                       ; Get GPIOs 7:0 and combine
+0246 ---- f912                         in          R7, [#IOP_AIODIO0_GPIODIN]
+0247 ---- fd0e                         or          R7, R6
+
+                                       ; Move the desired GPIO pin value into bit 0 and mask
+0248 ---- fd8d                         lsr         R7, R5
+0249 ---- f001                         and         R7, #0x0001
+024a ---- adb7                         rts
+
+
+
+
+               ; PARAMETERS:
+               ;     R7 = AUX I/O index (0-7)
+               ;
+               ; CLOBBERS:
+               ;     R6, R7
+               AdccompbSelectGpioInput:
+                                       ; Make sure that the AUX I/O index is valid
+024b ---- f007                         and         R7, #0x0007
+
+                                       ; Disconnect all signals
+024c ---- 1462                         jsr         AdiDdiAcquire
+024d 86ff 63f8                         ld          R6, #(BV_ADI16_MUX2_ADCCOMPB_IN | BV_ADI16_MUX3_ADCCOMPB_IN)
+024f ---- eb51                         out         R6, [#IOP_ADICLR_MUX2_MUX3]
+
+                                       ; Connect the specified GPIO
+0250 8680 6000                         ld          R6, #ADI16_MUX3_ADCCOMPB_IN_AUXIO0
+0252 ---- ed8f                         lsr         R6, R7
+0253 ---- eb49                         out         R6, [#IOP_ADISET_MUX2_MUX3]
+
+                                       ; Ensure that it has taken effect
+0254 ---- fd47                         nop         ; Workaround for back-to-back ADI/DDI accesses
+0255 ---- eb49                         out         R6, [#IOP_ADISET_MUX2_MUX3]
+0256 ---- 1465                         jsr         AdiDdiRelease
+0257 ---- adb7                         rts
+
+
+
+
+               ; CLOBBERS:
+               ;     R7
+               AdcDisable:
+                                       ; Disable the ADC reference
+0258 ---- 1462                         jsr         AdiDdiAcquire
+0259 ---- 7079                         ld          R7, #((ADI16_ADCREF_EN | ADI16_ADCREF_REF_ON_IDLE) | (ADI16_ADCREF_SRC | (ADI16_ADCREF_EXT | ADI16_ADCREF_IOMUX)))
+025a ---- fb55                         out         R7, [#IOP_ADICLR_ADCREF]
+
+                                       ; Assert reset and disable the ADC
+025b ---- 71fb                         ld          R7, #((ADI16_ADC_EN | ADI16_ADC_RESET_N) | (BV_ADI16_ADC_SMPL_CYCLE_EXP | (BV_ADI16_ADC_SMPL_MODE | ADI16_ADC_SCALE_DIS)))
+025c ---- fb54                         out         R7, [#IOP_ADICLR_ADC]
+
+                                       ; Ensure that it has taken effect
+025d ---- fd47                         nop         ; Workaround for back-to-back ADI/DDI accesses
+025e ---- fb54                         out         R7, [#IOP_ADICLR_ADC]
+025f ---- 1465                         jsr         AdiDdiRelease
+
+                                       ; Disable the ADC clock (no need to wait since IOB_WUC_ADCCLKCTL_ACK goes low immediately)
+0260 ---- 4431                         iobclr      #IOB_WUC_ADCCLKCTL_REQ, [#IOP_WUC_ADCCLKCTL]
+
+                                       ; Disable the ADC data interface
+0261 ---- 4400                         iobclr      #0, [#IOP_ANAIF_ADCCTL]
+
+0262 ---- adb7                         rts
+               .segment end "Procedure Library"
+
+
+; Generated by JOSEPH-LAPTOP at 2023-04-14 10:20:52.491
