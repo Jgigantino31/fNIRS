@@ -1,6 +1,10 @@
-# A Compact, Efficient fNIRS Design
+# A Compact and Efficient fNIRS Design
 
-This repository contains the information needed to fully recreate the work performed as part of my Master's Thesis at Villanova University. The thesis was submitted to the faculty of the Department of Electrical and Computer Engineering at Villanova University in partial fulfillment of the requirements for the degree of Master of Science in Electrical Engineering in April of 2023. The thesis titled "A Compact, Efficient fNIRS Design" is available in this repository and serves as the primary source of information on the project.
+This repository contains the information needed to fully recreate the work performed as part of my Master's Thesis at Villanova University. The thesis was submitted to the faculty of the Department of Electrical and Computer Engineering at Villanova University in partial fulfillment of the requirements for the degree of Master of Science in Electrical Engineering in April of 2023. The thesis titled "A Compact and Efficient fNIRS Design" is available in this repository and serves as the primary source of information on the project.
+
+## Abstract
+
+Functional near-infrared spectroscopy (fNIRS) is a non-invasive brain imaging technique that overcomes many limitations of traditional imaging methods since the technology allows safe, portable, wearable, and cost-effective designs. fNIRS devices use the absorption characteristics of near-infrared (NIR) light by oxygenated and deoxygenated hemoglobin in the brain. Measuring the changes in reflected NIR light, an fNIRS device can provide information on the relative changes in the concentration of oxygenated and deoxygenated hemoglobin in the brain which can then be related to cognitive activations or brain health depending on the application. This thesis focused on creating a compact design in order to increase the efficiency and accessibility of fNIRS devices. It produced a fully functional, compact, modular, battery-powered, and wireless two channel fNIRS sensor. The sensor was successfully designed, manufactured, assembled, and evaluated using baseline system tests as well as real world performance tests. The results indicated that this fNIRS sensor is fully functional and capable of collecting hemodynamic signals.
 
 ## Repository Contents
 
