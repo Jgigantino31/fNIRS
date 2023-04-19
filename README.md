@@ -1,6 +1,6 @@
 # A Compact and Efficient fNIRS Design
 
-This repository contains the information needed to fully recreate the work performed as part of my Master's Thesis at Villanova University. The thesis was submitted to the faculty of the Department of Electrical and Computer Engineering at Villanova University in partial fulfillment of the requirements for the degree of Master of Science in Electrical Engineering in April of 2023. The thesis titled "A Compact and Efficient fNIRS Design" is available in this repository and serves as the primary source of information on the project.
+This repository contains the information needed to fully recreate the work performed as part of my Master's Thesis at Villanova University. The thesis, titled "A Compact and Efficient fNIRS Design", was submitted to the faculty of the Department of Electrical and Computer Engineering at Villanova University in partial fulfillment of the requirements for the degree of Master of Science in Electrical Engineering in April of 2023.
 
 ## Abstract
 
