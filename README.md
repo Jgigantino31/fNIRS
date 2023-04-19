@@ -25,7 +25,7 @@ All of the software used by the device is available in this repository. In order
 
 ### Flash Pre-Compiled Binaries
 
-If you wish to flash the device's firmware as-is you only need to install SmartRF Flash Programmer V2. Flash the three hex files in the folder [Firmware Files](/Firmware%20Files) in the following order: [bim_extflash.hex](/Firmware%20Files/bim_extflash.hex), [project_zero_stack_cc2650.hex](/Firmware%20Files/project_zero_stack_cc2650.hex), [project_zero_app_cc2650launchxl.hex](/Firmware%20Files/project_zero_app_cc2650launchxl.hex). These files are produced as a result of compiling each project in the "Workspace" folder.
+If you wish to flash the device's firmware as-is you only need to install SmartRF Flash Programmer V2. Flash the three hex files in the folder [Firmware Files](/Firmware%20Files) in the following order: [bim_extflash.hex](/Firmware%20Files/bim_extflash.hex), [project_zero_stack_cc2650.hex](/Firmware%20Files/project_zero_stack_cc2650.hex), [project_zero_app_cc2650launchxl.hex](/Firmware%20Files/project_zero_app_cc2650launchxl.hex). These files are produced as a result of compiling each project in the [Workspace](/Workspace) folder.
 
 ### Rebuild Project from Source
 
