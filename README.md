@@ -8,7 +8,7 @@ Functional near-infrared spectroscopy (fNIRS) is a non-invasive brain imaging te
 
 ## Repository Contents
 
-The folder "Board Files" contains all of the information needed for fabrication and assembly of the device. The folder "Workspace" contains the Code Composer Studio projects and other files that make up the device's software. The folder "Firmware Files" contain compiled binary files you can flash immediately without needing to install Code Composer Studio and its supporting software. The folder "Application" contains an example Android Application which can communicate with the device and was used to test the device.
+The folder [Board Files](/Board%20Files) contains all of the information needed for fabrication and assembly of the device. The folder "Workspace" contains the Code Composer Studio projects and other files that make up the device's software. The folder "Firmware Files" contain compiled binary files you can flash immediately without needing to install Code Composer Studio and its supporting software. The folder "Application" contains an example Android Application which can communicate with the device and was used to test the device.
 
 ## Hardware
 
