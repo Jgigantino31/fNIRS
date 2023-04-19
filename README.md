@@ -1,6 +1,6 @@
-# A Compact and Efficient fNIRS Design
+# A Compact and Efficient fNIRS Design - Repository
 
-This repository contains the information needed to fully recreate the work performed as part of my Master's Thesis at Villanova University. The thesis, titled "A Compact and Efficient fNIRS Design", was submitted to the faculty of the Department of Electrical and Computer Engineering at Villanova University in partial fulfillment of the requirements for the degree of Master of Science in Electrical Engineering in April of 2023.
+This repository contains the data needed to fully recreate the work performed as part of my Master's Thesis at Villanova University. The thesis, titled "A Compact and Efficient fNIRS Design", was submitted to the faculty of the Department of Electrical and Computer Engineering at Villanova University in partial fulfillment of the requirements for the degree of Master of Science in Electrical Engineering in April of 2023.
 
 ## Abstract
 
@@ -14,8 +14,8 @@ The folder "Board Files" contains all of the information needed to manufacture t
 
 The device schematic was designed in Altium Circuit Maker and the project can be viewed online in Altium 365. You can also view the PCB layout, bill of materials, and a 3D render online. The folder "Board Files" contains the released project files which can be used to manufacture the device.
 
-**Circuit Maker Project** - https://workspace.circuitmaker.com/Projects/Details/JosephGigantino/fNIRS-V3 <br>
-**Altium 365 Project** - https://365.altium.com/files/D22399D6-5709-4094-A18F-3D94270D79AF <br>
+**Circuit Maker Project** - https://purl.org/fnirs/circuitmaker <br>
+**Altium 365 Viewer** - https://purl.org/fnirs/altium365 <br>
 
 ## Software
 
@@ -53,7 +53,7 @@ The folder "Workspace" should be set as the current workspace in Code Composer S
 
 ## License
 
-This work is licensed under a
+This repository is licensed under a
 [Creative Commons Attribution-ShareAlike 4.0 International License][cc-by-sa].
 
 [![CC BY-SA 4.0][cc-by-sa-image]][cc-by-sa]
