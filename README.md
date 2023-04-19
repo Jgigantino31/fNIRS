@@ -35,7 +35,7 @@ The folder "Workspace" should be set as the current workspace in Code Composer S
 
 ### Important Software Files
 
-**Code Composer Studio Workspace Folder** - \Workspace <br>
+**Code Composer Studio Workspace Folder** - [Workspace](/Workspace) <br>
 
 **Bim_extflash Project Folder** - \Workspace\bim_extflash <br>
 **Bim_extflash Project Output** - \Workspace\bim_extflash\FlashOnly_ST\bim_extflash.hex <br>
