@@ -33,12 +33,17 @@ If you wish to make changes to the source code you must setup the required devel
 
 The folder "Workspace" should be set as the current workspace in Code Composer Studio. The workspace must be in a directory without spaces. It contains three projects:  bim_extflash, Project Zero Stack, and Project Zero Application. Bim_extflash is a small application which produces bim_extflash.hex. This file is used to wipe the device and prepare it to accept a new flash image. Project Zero Stack contains include directives to the TI-RTOS and BLE-STACK which must be installed to their default locations of "C:\ti" and "C:\ti\simplelink" respectively. You must install TI-RTOS V2.20.01.08 for CC13xx/CC26xx and you must install BLE-STACK V2.2.1 in order to be able to build. You must also ensure both projects use compiler version TI V5.2.6 in order to be able to build. You must build Project Zero Stack before Project Zero Application. The main project code for Project Zero Application can be found in the "project_zero.c" file. You must use Sensor Controller Studio to open the Sensor Controller Studio Project file (.scp) named "ADC Dusk2Dawn Sensor.scp" if you wish to view or edit the program running on the low power sensor core. This program communicates with the main program which you can edit in Code Composer Studio. The main program also uses the Project Zero Stack project to interface to the example Android application over Bluetooth. Both Project Zero Stack and Project Zero Application output a hex file in their respective Debug folders once compiled. For convenience, the output of all three projects have also been placed in the "Firmware Files" folder for easy access.
 
-**Code Composer Studio Workspace** - \Workspace <br>
-**Bim_extflash Project** - \Workspace\bim_extflash <br>
+### Important Software Files
+
+**Code Composer Studio Workspace Folder** - \Workspace <br>
+
+**Bim_extflash Project Folder** - \Workspace\bim_extflash <br>
 **Bim_extflash Project Output** - \Workspace\bim_extflash\FlashOnly_ST\bim_extflash.hex <br>
-**Project Zero Stack** - \Workspace\project_zero_stack_cc2650 <br>
+
+**Project Zero Stack Folder** - \Workspace\project_zero_stack_cc2650 <br>
 **Project Zero Stack Output** - \Workspace\project_zero_stack_cc2650\Debug\project_zero_stack_cc2650.hex <br>
-**Project Zero Application** - \Workspace\project_zero_app_cc2650launchxl <br>
+
+**Project Zero Application Folder** - \Workspace\project_zero_app_cc2650launchxl <br>
 **Project Zero Application Main C File** - \Workspace\project_zero_app_cc2650launchxl\Application\project_zero.c <br>
 **Sensor Controller Studio Project** - \Workspace\project_zero_app_cc2650launchxl\Application\ADC Dusk2Dawn Sensor.scp <br>
 **Project Zero Application Output** - \Workspace\project_zero_app_cc2650launchxl\Debug\project_zero_app_cc2650launchxl.hex <br>
