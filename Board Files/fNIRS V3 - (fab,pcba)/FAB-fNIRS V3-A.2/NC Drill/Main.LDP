@@ -1,0 +1,3 @@
+Layer Pairs Export File for PCB: C:\Users\Joseph Gigantino\AppData\Local\TempReleases\Snapshot\1\Main.CMPcbDoc
+LayersSetName=Top_Bot_Thru_Holes|DrillFile=main-roundholes.txt|DrillLayers=gtl,gp1,gp2,gbl
+LayersSetName=Top_Bot_Slot_Holes|DrillFile=main-slotholes.txt|DrillLayers=gtl,gp1,gp2,gbl
