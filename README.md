@@ -8,11 +8,11 @@ Functional near-infrared spectroscopy (fNIRS) is a non-invasive brain imaging te
 
 ## Repository Contents
 
-The folder [Board Files](/Board%20Files) contains all of the information needed for fabrication and assembly of the device. The folder "Workspace" contains the Code Composer Studio projects and other files that make up the device's software. The folder "Firmware Files" contain compiled binary files you can flash immediately without needing to install Code Composer Studio and its supporting software. The folder "Application" contains an example Android Application which can communicate with the device and was used to test the device.
+The folder [Board Files](/Board%20Files) contains all of the information needed for fabrication and assembly of the device. The folder [Workspace](/Workspace) contains the Code Composer Studio projects and other files that make up the device's software. The folder [Firmware Files](/Firmware%20Files) contain compiled binary files you can flash immediately without needing to install Code Composer Studio and its supporting software. The folder [Application](/Application) contains an example Android Application which can communicate with the device and was used to test the device.
 
 ## Hardware
 
-The device was designed in Altium Circuit Maker and the project can be viewed online in Altium 365. You can also view the PCB layout, bill of materials, and a 3D render online. The folder "Board Files" contains the released project files from Altium Circuit Maker which can be used to manufacture the device.
+The device was designed in Altium Circuit Maker and the project can be viewed online in Altium 365. You can also view the PCB layout, bill of materials, and a 3D render online. The folder [Board Files](/Board%20Files) contains the released project files from Altium Circuit Maker which can be used to manufacture the device.
 
 **Circuit Maker Project** - https://purl.org/fnirs/circuitmaker <br>
 **Altium 365 Viewer** - https://purl.org/fnirs/altium365 <br>
@@ -25,28 +25,28 @@ All of the software used by the device is available in this repository. In order
 
 ### Flash Pre-Compiled Binaries
 
-If you wish to flash the device's firmware as-is you only need to install SmartRF Flash Programmer V2. Flash the three hex files in the folder "Firmware Files" in the following order: bim_extflash.hex, project_zero_stack_cc2650.hex, project_zero_app_cc2650launchxl.hex. These files are produced as a result of compiling each project in the "Workspace" folder.
+If you wish to flash the device's firmware as-is you only need to install SmartRF Flash Programmer V2. Flash the three hex files in the folder [Firmware Files](/Firmware%20Files) in the following order: bim_extflash.hex, project_zero_stack_cc2650.hex, project_zero_app_cc2650launchxl.hex. These files are produced as a result of compiling each project in the "Workspace" folder.
 
 ### Rebuild Project from Source
 
 If you wish to make changes to the source code you must setup the required developer environment and rebuild the project from source. Install the latest version of Code Composer Studio and Sensor Controller Studio. Code Composer Studio should be installed to "C:\ti\ccs1210" while Sensor Controller Studio may be installed to any directory. You may optionally install SmartRF Flash Programmer V2 as well if you wish to directly install binary (.hex) files. <br>
 
-The folder "Workspace" should be set as the current workspace in Code Composer Studio. The workspace must be in a directory without spaces. It contains three projects:  bim_extflash, Project Zero Stack, and Project Zero Application. Bim_extflash is a small application which produces bim_extflash.hex. This file is used to wipe the device and prepare it to accept a new flash image. Project Zero Stack contains include directives to the TI-RTOS and BLE-STACK which must be installed to their default locations of "C:\ti" and "C:\ti\simplelink" respectively. You must install TI-RTOS V2.20.01.08 for CC13xx/CC26xx and you must install BLE-STACK V2.2.1 in order to be able to build. You must also ensure both projects use compiler version TI V5.2.6 in order to be able to build. You must build Project Zero Stack before attempting to build Project Zero Application as Project Zero Application depends on Project Zero Stack. The main project code for Project Zero Application can be found in the "project_zero.c" file. You must use Sensor Controller Studio to open the Sensor Controller Studio Project file (.scp) named "ADC Dusk2Dawn Sensor.scp" if you wish to view or edit the program running on the low power sensor core. Both Project Zero Stack and Project Zero Application output a hex file in their respective Debug folders once compiled.
+The folder [Workspace](/Workspace) should be set as the current workspace in Code Composer Studio. The workspace must be in a directory without spaces. It contains three projects:  bim_extflash, Project Zero Stack, and Project Zero Application. Bim_extflash is a small application which produces bim_extflash.hex. This file is used to wipe the device and prepare it to accept a new flash image. Project Zero Stack contains include directives to the TI-RTOS and BLE-STACK which must be installed to their default locations of "C:\ti" and "C:\ti\simplelink" respectively. You must install TI-RTOS V2.20.01.08 for CC13xx/CC26xx and you must install BLE-STACK V2.2.1 in order to be able to build. You must also ensure both projects use compiler version TI V5.2.6 in order to be able to build. You must build Project Zero Stack before attempting to build Project Zero Application as Project Zero Application depends on Project Zero Stack. The main project code for Project Zero Application can be found in the "project_zero.c" file. You must use Sensor Controller Studio to open the Sensor Controller Studio Project file (.scp) named "ADC Dusk2Dawn Sensor.scp" if you wish to view or edit the program running on the low power sensor core. Both Project Zero Stack and Project Zero Application output a hex file in their respective Debug folders once compiled.
 
 ### Important Software Files
 
 **Code Composer Studio Workspace Folder** - [Workspace](/Workspace) <br>
 
-**Bim_extflash Project Folder** - \Workspace\bim_extflash <br>
-**Bim_extflash Project Output** - \Workspace\bim_extflash\FlashOnly_ST\bim_extflash.hex <br>
+**Bim_extflash Project Folder** - [bim_extflash](/Workspace/bim_extflash) <br>
+**Bim_extflash Project Output** - [bim_extflash.hex](/Workspace/bim_extflash/FlashOnly_ST/bim_extflash.hex) <br>
 
-**Project Zero Stack Folder** - \Workspace\project_zero_stack_cc2650 <br>
-**Project Zero Stack Output** - \Workspace\project_zero_stack_cc2650\Debug\project_zero_stack_cc2650.hex <br>
+**Project Zero Stack Folder** - [project_zero_stack_cc2650](/Workspace/project_zero_stack_cc2650) <br>
+**Project Zero Stack Output** - [project_zero_stack_cc2650.hex](/Workspace/project_zero_stack_cc2650/Debug/project_zero_stack_cc2650.hex) <br>
 
-**Project Zero Application Folder** - \Workspace\project_zero_app_cc2650launchxl <br>
-**Project Zero Application Main C File** - \Workspace\project_zero_app_cc2650launchxl\Application\project_zero.c <br>
-**Sensor Controller Studio Project** - \Workspace\project_zero_app_cc2650launchxl\Application\ADC Dusk2Dawn Sensor.scp <br>
-**Project Zero Application Output** - \Workspace\project_zero_app_cc2650launchxl\Debug\project_zero_app_cc2650launchxl.hex <br>
+**Project Zero Application Folder** - [project_zero_app_cc2650launchxl](/Workspace/project_zero_app_cc2650launchxl) <br>
+**Project Zero Application Main C File** - [project_zero.c](/Workspace/project_zero_app_cc2650launchxl/Application/project_zero.c) <br>
+**Sensor Controller Studio Project** - [ADC Dusk2Dawn Sensor.scp](/Workspace/project_zero_app_cc2650launchxl/Application/ADC%20Dusk2Dawn%20Sensor.scp) <br>
+**Project Zero Application Output** - [project_zero_app_cc2650launchxl.hex](/Workspace/project_zero_app_cc2650launchxl/Debug/project_zero_app_cc2650launchxl.hex) <br>
 
 ### Software Download Links
 
