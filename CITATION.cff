@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+title: A Compact and Efficient fNIRS Design - Repository
+message: >-
+  If you use this repository, please cite it using the
+  metadata from this file.
+type: dataset
+authors:
+  - given-names: Joseph
+    family-names: Gigantino
+    orcid: 'https://orcid.org/0009-0008-3185-9543'
+identifiers:
+  - type: url
+    value: 'https://purl.org/fnirs/repository'
+    description: Persistent URL
+repository-code: 'https://github.com/Jgigantino31/fNIRS'
+license: CC-BY-NC-SA-4.0
