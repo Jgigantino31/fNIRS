@@ -4,7 +4,7 @@
 
 This repository contains the data needed to fully recreate the work performed as part of my Master's Thesis at Villanova University. The thesis, titled "A Compact and Efficient fNIRS Design", was submitted to the faculty of the Department of Electrical and Computer Engineering at Villanova University in partial fulfillment of the requirements for the degree of Master of Science in Electrical Engineering in May 2023.
 
-This repository is available on GitHub at [https://github.com/Jgigantino31/fNIRS](https://github.com/Jgigantino31/fNIRS). The repository is also available using a Persistent URL at [https://purl.org/fnirs/repository](https://purl.org/fnirs/repository). The corresponding thesis is available at [https://purl.org/fnirs/thesis](https://purl.org/fnirs/thesis).
+This repository is available on GitHub at [https://github.com/Jgigantino31/fNIRS](https://github.com/Jgigantino31/fNIRS). This repository is also available using a persistent URL at [https://purl.org/fnirs/repository](https://purl.org/fnirs/repository). The corresponding thesis is available at [https://purl.org/fnirs/thesis](https://purl.org/fnirs/thesis).
 
 ## Abstract
 
