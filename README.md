@@ -16,7 +16,7 @@ The folder [Board Files](/Board%20Files) contains all of the information needed 
 
 ## Hardware
 
-The device was designed in Altium CircuitMaker and the project can be viewed online in Altium 365. You can also view the PCB layout, bill of materials, and a 3D render online. The folder [Board Files](/Board%20Files) contains the released project files from Altium Circuit Maker which can be used to manufacture the device.
+The device was designed in Altium CircuitMaker and the project can be viewed online in Altium 365. You can also view the schematic, PCB layout, bill of materials, and a 3D render online. The folder [Board Files](/Board%20Files) contains the released project files from Altium CircuitMaker which can be used to manufacture the device.
 
 **CircuitMaker Project** - [https://purl.org/fnirs/circuitmaker](https://purl.org/fnirs/circuitmaker) <br>
 **Altium 365 Viewer** - [https://purl.org/fnirs/altium365](https://purl.org/fnirs/altium365) <br>
