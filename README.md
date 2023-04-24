@@ -4,6 +4,8 @@
 
 This repository contains the data needed to fully recreate the work performed as part of my Master's Thesis at Villanova University. The thesis, titled "A Compact and Efficient fNIRS Design", was submitted to the faculty of the Department of Electrical and Computer Engineering at Villanova University in partial fulfillment of the requirements for the degree of Master of Science in Electrical Engineering in May 2023.
 
+This repository is available on GitHub at [https://github.com/Jgigantino31/fNIRS](https://github.com/Jgigantino31/fNIRS). It is also available using a Persistent URL at [https://purl.org/fnirs/repository](https://purl.org/fnirs/repository). The corresponding thesis is available at [https://purl.org/fnirs/thesis](https://purl.org/fnirs/thesis).
+
 ## Abstract
 
 Functional near-infrared spectroscopy (fNIRS) is a non-invasive brain imaging technique that overcomes many limitations of traditional imaging methods since the technology allows safe, portable, wearable, and cost-effective designs. fNIRS devices use the absorption characteristics of near-infrared (NIR) light by oxygenated and deoxygenated hemoglobin in the brain. Measuring the changes in reflected NIR light, an fNIRS device can provide information on the relative changes in the concentration of oxygenated and deoxygenated hemoglobin in the brain which can then be related to cognitive activations or brain health depending on the application. This thesis focused on creating a compact design in order to increase the efficiency and accessibility of fNIRS devices. It produced a fully functional, compact, modular, battery-powered, and wireless two channel fNIRS sensor. The sensor was successfully designed, manufactured, assembled, and evaluated using baseline system tests as well as real world performance tests. The results indicated that this fNIRS sensor is fully functional and capable of collecting hemodynamic signals.
@@ -14,16 +16,16 @@ The folder [Board Files](/Board%20Files) contains all of the information needed 
 
 ## Hardware
 
-The device was designed in Altium Circuit Maker and the project can be viewed online in Altium 365. You can also view the PCB layout, bill of materials, and a 3D render online. The folder [Board Files](/Board%20Files) contains the released project files from Altium Circuit Maker which can be used to manufacture the device.
+The device was designed in Altium CircuitMaker and the project can be viewed online in Altium 365. You can also view the PCB layout, bill of materials, and a 3D render online. The folder [Board Files](/Board%20Files) contains the released project files from Altium Circuit Maker which can be used to manufacture the device.
 
-**Circuit Maker Project** - https://purl.org/fnirs/circuitmaker <br>
-**Altium 365 Viewer** - https://purl.org/fnirs/altium365 <br>
+**CircuitMaker Project** - [https://purl.org/fnirs/circuitmaker](https://purl.org/fnirs/circuitmaker) <br>
+**Altium 365 Viewer** - [https://purl.org/fnirs/altium365](https://purl.org/fnirs/altium365) <br>
 
 ## Software
 
 All of the software used by the device is available in this repository. In order to flash the firmware to the device you must have a SimpleLink™ CC2650 wireless MCU LaunchPad™ Development Kit which are available for purchase from Texas Instruments.
 
-**Launchpad Development Kit** - https://www.ti.com/tool/LAUNCHXL-CC2650 <br>
+**Launchpad Development Kit** - [https://www.ti.com/tool/LAUNCHXL-CC2650](https://www.ti.com/tool/LAUNCHXL-CC2650) <br>
 
 ### Flash Pre-Compiled Binaries
 
@@ -52,11 +54,11 @@ The folder [Workspace](/Workspace) should be set as the current workspace in Cod
 
 ### Software Download Links
 
-**SmartRF Flash Programmer V2** - https://www.ti.com/tool/FLASH-PROGRAMMER <br>
-**Sensor Controller Studio** - https://www.ti.com/tool/SENSOR-CONTROLLER-STUDIO <br>
-**Code Composer Studio** - https://www.ti.com/tool/CCSTUDIO <br>
-**TI-RTOS V2.20.01.08 for CC13xx/CC26xx** - https://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/tirtos/index.html <br>
-**BLE-STACK V2.2.1** - https://www.ti.com/tool/BLE-STACK-ARCHIVE <br>
+**SmartRF Flash Programmer V2** - [https://www.ti.com/tool/FLASH-PROGRAMMER](https://www.ti.com/tool/FLASH-PROGRAMMER) <br>
+**Sensor Controller Studio** - [https://www.ti.com/tool/SENSOR-CONTROLLER-STUDIO](https://www.ti.com/tool/SENSOR-CONTROLLER-STUDIO) <br>
+**Code Composer Studio** - [https://www.ti.com/tool/CCSTUDIO](https://www.ti.com/tool/CCSTUDIO) <br>
+**TI-RTOS V2.20.01.08 for CC13xx/CC26xx** - [https://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/tirtos/index.html](https://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/tirtos/index.html) <br>
+**BLE-STACK V2.2.1** - [https://www.ti.com/tool/BLE-STACK-ARCHIVE](https://www.ti.com/tool/BLE-STACK-ARCHIVE) <br>
 
 ## License
 
