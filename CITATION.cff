@@ -9,8 +9,20 @@ authors:
     family-names: Gigantino
     orcid: 'https://orcid.org/0009-0008-3185-9543'
 identifiers:
+  - type: doi
+    value: 10.5281/zenodo.7860585
+    description: Zenodo DOI
   - type: url
     value: 'https://purl.org/fnirs/repository'
     description: Persistent URL
 repository-code: 'https://github.com/Jgigantino31/fNIRS'
+abstract: >-
+  This repository contains the data needed to fully recreate
+  the work performed as part of my Master's Thesis at
+  Villanova University. The thesis, titled "A Compact and
+  Efficient fNIRS Design", was submitted to the faculty of
+  the Department of Electrical and Computer Engineering at
+  Villanova University in partial fulfillment of the
+  requirements for the degree of Master of Science in
+  Electrical Engineering in May 2023.
 license: CC-BY-NC-SA-4.0
